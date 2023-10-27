@@ -27,11 +27,23 @@ export default {
 
 
 		// handle all POST requests
-		else if (request.method === "POST") {
-			if (request.url.endsWith("organization-chart")) {
-				return new Response("[Interactive JSON output for POST request]");
-			}
-		}
+		// else if (request.method === "POST") {
+		// 	// organization-chart endpoint
+		// 	if (request.url.endsWith("organization-chart")) {
+		// 		fetch("https://organization-database.paul-struble.workers.dev/OrgCsvToJson", {
+		// 			method: 'POST',
+		// 			body: request.body, // Your CSV data here
+		// 		})
+		// 			.then((response) => response.json())
+		// 			.then((json) => {
+		// 				return new Response(json, {
+		// 					headers: {
+		// 						"content-type": "application/json;charset=UTF-8",
+		// 					},
+		// 				});
+		// 			})
+		// 	}
+		// }
 
 
 		// resource not found response

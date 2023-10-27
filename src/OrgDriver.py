@@ -68,7 +68,7 @@ class Organization:
                f' }}'
 
 
-class OrgJsonConvert:
+class OrgDriver:
     # input and output files
     csv_path = "data/org_csv_databases/general_data.csv"
     json_path = "data/org_json_graphs/general_data.json"
@@ -89,11 +89,11 @@ class OrgJsonConvert:
     with open(json_path, 'w') as json_file:
         json_file.write(org.to_json())
 
-    # with open(json_path, 'r') as json_file:
-    #     json_data = json.load(json_file)
-    #     print(f'json_data type: {type(json_data)}')
-    #
-    # with open(json_path, 'w') as json_file:
-    #     json.dump(json_data, json_file, indent=4)
+    with open(json_path, 'r') as json_file:
+        json_data = json.load(json_file)
+        print(f'json_data type: {type(json_data)}')
+
+    with open(json_path, 'w') as json_file:
+        json.dump(json_data, json_file, indent=4)
 
     print(f'CSV file "{csv_path}" has been converted to JSON file "{json_path}"')
