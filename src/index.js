@@ -1,3 +1,83 @@
+class Employee {
+	constructor(name, department, salary, office, isManager, skills) {
+		this.name = name;
+		this.department = department;
+		this.salary = salary;
+		this.office = office;
+		this.isManager = isManager;
+		this.skills = skills;
+	}
+
+	toJson() {
+		let skills = "";
+		for (const skill of this.skills) {
+			skills += skill;
+		}
+
+		return `{{\
+		"name":"${this.name}",\
+		"department":"${this.department}",\
+		"salary":${this.salary},\
+		"office":"${this.office}",\
+		"isManager":"${String(this.isManager)}",\
+		"skills":[${skills[0]}, ${skills[1]}, ${skills[2]}]\
+		}}`
+	}
+}
+
+
+class Department {
+	constructor(name = "") {
+		this.name = name;
+		this.managerName = "";
+		this.employees = [];
+	}
+
+	setManager(managerName) {
+		this.managerName = managerName;
+	}
+
+	addEmployee(employee) {
+		this.employees.push(employee);
+	}
+
+	toJson() {
+		return `{{\
+		"name":"${this.name}",\
+		"managerName":"${this.managerName}",\
+		"employees":[${this.employees.map((e) => e.toJson()).join(", ")}]\
+		}}`
+	}
+}
+
+
+class Organization {
+	constructor() {
+		this.departments = new Map();
+	}
+
+	addEmployee(employee) {
+		const department_name = employee.department;
+		if (!this.departments.has(department_name)) {
+			this.departments.set(department_name, new Department(department_name));
+		}
+		this.departments.get(department_name).addEmployee(employee);
+		if (employee.isManager) {
+			this.departments.get(department_name).setManager(employee.name)
+		}
+	}
+
+	toJson() {
+		return `{{\
+		"organization":\
+		{{\
+		"departments":[${Array.from(this.departments.values()).map((d) => d.toJson()).join(", ")}]\
+		}}\
+		}}`
+	}
+}
+
+
 export default {
 	async fetch(request, env, ctx) {
 		// handle all GET requests
@@ -27,23 +107,32 @@ export default {
 
 
 		// handle all POST requests
-		// else if (request.method === "POST") {
-		// 	// organization-chart endpoint
-		// 	if (request.url.endsWith("organization-chart")) {
-		// 		fetch("https://organization-database.paul-struble.workers.dev/OrgCsvToJson", {
-		// 			method: 'POST',
-		// 			body: request.body, // Your CSV data here
-		// 		})
-		// 			.then((response) => response.json())
-		// 			.then((json) => {
-		// 				return new Response(json, {
-		// 					headers: {
-		// 						"content-type": "application/json;charset=UTF-8",
-		// 					},
-		// 				});
-		// 			})
-		// 	}
-		// }
+		else if (request.method === "POST") {
+			// organization-chart endpoint
+			if (request.url.endsWith("organization-chart")) {
+				const jsonObject = JSON.parse(request.body);
+				const orgData = jsonObject.organizationData;
+
+				// Organization object to construct from csv
+				let org = new Organization()
+
+				const rows = orgData.split("\n");
+				for (let row_index = 1; row_index < rows.length; row_index++) {
+					const row = rows[row_index].split(",");
+					const salary = Number(row[2]);
+					const isManager = row[4] === "TRUE";
+					const employee = new Employee(row[0], row[1], salary, row[3], isManager, [row[5], row[6], row[7]])
+					org.addEmployee(employee)
+				}
+
+				const orgChartJson = JSON.stringify(JSON.parse(org.toJson()), null, 4)
+				return new Response(orgChartJson, {
+					headers: {
+						"content-type": "application/json;charset=UTF-8",
+					},
+				});
+			}
+		}
 
 
 		// resource not found response
