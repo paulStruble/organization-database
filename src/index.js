@@ -9,19 +9,7 @@ class Employee {
 	}
 
 	toJson() {
-		let skills = "";
-		for (const skill of this.skills) {
-			skills += skill;
-		}
-
-		return `{{\
-		"name":"${this.name}",\
-		"department":"${this.department}",\
-		"salary":${this.salary},\
-		"office":"${this.office}",\
-		"isManager":"${String(this.isManager)}",\
-		"skills":[${skills[0]}, ${skills[1]}, ${skills[2]}]\
-		}}`
+		return `{"name":"${this.name}","department":"${this.department}","salary":${this.salary},"office":"${this.office}","isManager":${String(this.isManager)},"skills":["${this.skills[0]}", "${this.skills[1]}", "${this.skills[2]}"]}`
 	}
 }
 
@@ -42,11 +30,7 @@ class Department {
 	}
 
 	toJson() {
-		return `{{\
-		"name":"${this.name}",\
-		"managerName":"${this.managerName}",\
-		"employees":[${this.employees.map((e) => e.toJson()).join(", ")}]\
-		}}`
+		return `{"name":"${this.name}","managerName":"${this.managerName}","employees":[${this.employees.map((e) => e.toJson()).join(", ")}]}`
 	}
 }
 
@@ -68,12 +52,7 @@ class Organization {
 	}
 
 	toJson() {
-		return `{{\
-		"organization":\
-		{{\
-		"departments":[${Array.from(this.departments.values()).map((d) => d.toJson()).join(", ")}]\
-		}}\
-		}}`
+		return `{"organization":{"departments":[${Array.from(this.departments.values()).map((d) => d.toJson()).join(", ")}]}}`
 	}
 }
 
@@ -83,7 +62,7 @@ export default {
 		// handle all GET requests
 		if (request.method === "GET") {
 			// organization-chart endpoint
-			if (request.url.endsWith("/organization-chart")) {
+			if (request.url.match(/\/organization-chart\/*$/)) {
 				const org_data = await env.KV_ORG_DB.get("org_json_default", { type: "json" });
 				const json = JSON.stringify(org_data, null, 4);
 				return new Response(json, {
@@ -94,7 +73,7 @@ export default {
 			}
 
 			// me endpoint
-			else if (request.url.endsWith("/me")) {
+			else if (request.url.match(/\/me\/*$/)) {
 				const data = await env.KV_ORG_DB.get("me_json", { type: "json" });
 				const json = JSON.stringify(data, null, 4);
 				return new Response(json, {
@@ -105,27 +84,28 @@ export default {
 			}
 		}
 
-
 		// handle all POST requests
 		else if (request.method === "POST") {
 			// organization-chart endpoint
-			if (request.url.endsWith("organization-chart")) {
-				const jsonObject = JSON.parse(request.body);
-				const orgData = jsonObject.organizationData;
+			if (request.url.match(/\/organization-chart\/*$/)) {
+				// extract csv from request
+				const body = await request.text();
+				const orgData = body.substring(24, body.length - 3);
 
 				// Organization object to construct from csv
-				let org = new Organization()
+				let org = new Organization();
 
 				const rows = orgData.split("\n");
 				for (let row_index = 1; row_index < rows.length; row_index++) {
 					const row = rows[row_index].split(",");
 					const salary = Number(row[2]);
 					const isManager = row[4] === "TRUE";
-					const employee = new Employee(row[0], row[1], salary, row[3], isManager, [row[5], row[6], row[7]])
-					org.addEmployee(employee)
+					let skill3 = row[7].replace(/\s+$/, ''); // remove all trailing spaces
+					const employee = new Employee(row[0], row[1], salary, row[3], isManager, [row[5], row[6], skill3]);
+					org.addEmployee(employee);
 				}
 
-				const orgChartJson = JSON.stringify(JSON.parse(org.toJson()), null, 4)
+				const orgChartJson = JSON.stringify(JSON.parse(org.toJson()), null, 4);
 				return new Response(orgChartJson, {
 					headers: {
 						"content-type": "application/json;charset=UTF-8",
