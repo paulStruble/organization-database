@@ -90,19 +90,22 @@ export default {
 			if (request.url.match(/\/organization-chart\/*$/)) {
 				// extract csv from request
 				const body = await request.text();
-				const orgData = body.substring(24, body.length - 3);
+				const orgData = JSON.parse(body).organizationData;
 
 				// Organization object to construct from csv
 				let org = new Organization();
 
-				const rows = orgData.split("\n");
-				for (let row_index = 1; row_index < rows.length; row_index++) {
-					const row = rows[row_index].split(",");
-					const salary = Number(row[2]);
-					const isManager = row[4] === "TRUE";
-					let skill3 = row[7].replace(/\s+$/, ''); // remove all trailing spaces
-					const employee = new Employee(row[0], row[1], salary, row[3], isManager, [row[5], row[6], skill3]);
-					org.addEmployee(employee);
+				// parse organization data from csv
+				const rows = orgData.split("\r\n");
+				for (let row_index = 1; row_index < rows.length - 1; row_index++) {
+					const row = rows[row_index].split(","); // split row into array of cells
+					if (row) {
+						const salary = Number(row[2]); // parse number from salary string
+						const isManager = row[4] === "TRUE"; // parse boolean from isManager string
+						//construct employee from row data
+						const employee = new Employee(row[0], row[1], salary, row[3], isManager, [row[5], row[6], row[7]]);
+						org.addEmployee(employee);
+					}
 				}
 
 				const orgChartJson = JSON.stringify(JSON.parse(org.toJson()), null, 4);
