@@ -115,6 +115,47 @@ export default {
 					},
 				});
 			}
+
+			// employee endpoint
+			else if (request.url.match(/\/employee\/*$/)) {
+				const body = await request.text();
+				const query = JSON.parse(body);
+
+				// for debugging
+				// await env.KV_ORG_DB.put("request_" + Date.now(), body);
+
+				const orgData = await env.KV_ORG_DB.get("org_json_default", { type: "json" });
+				let employee_matches = [];
+
+				// find all employees matching the query - iterate through all employees in organization
+				const departments = orgData.organization.departments;
+				for (const department in departments) {
+					for (const employee in department.employees) {
+						employee_matches.push(employee); // add employee to matches by default, remove if not a match
+
+						// check for mismatch attributes between query and employee
+						for (const attribute in query) {
+							// check skills separately since they are stored in an array
+							if (attribute === "skill") {
+								if (employee.skills.indexOf(query[attribute] === -1)) {
+									employee_matches.pop();
+									break;
+								}
+							} else if (query[attribute] !== employee[attribute]) {
+								employee_matches.pop();
+								break;
+							}
+						}
+					}
+				}
+
+				const jsonMatches = `{ "employees": ${JSON.stringify(employee_matches)}}`;
+				return new Response(jsonMatches, {
+					headers: {
+						"content-type": "application/json;charset=UTF-8",
+					},
+				});
+			}
 		}
 
 
