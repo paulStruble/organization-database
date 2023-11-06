@@ -1,60 +1,5 @@
-class Employee {
-	constructor(name, department, salary, office, isManager, skills) {
-		this.name = name;
-		this.department = department;
-		this.salary = salary;
-		this.office = office;
-		this.isManager = isManager;
-		this.skills = skills;
-	}
-
-	toJson() {
-		return `{"name":"${this.name}","department":"${this.department}","salary":${this.salary},"office":"${this.office}","isManager":${String(this.isManager)},"skills":["${this.skills[0]}", "${this.skills[1]}", "${this.skills[2]}"]}`
-	}
-}
-
-
-class Department {
-	constructor(name = "") {
-		this.name = name;
-		this.managerName = "";
-		this.employees = [];
-	}
-
-	setManager(managerName) {
-		this.managerName = managerName;
-	}
-
-	addEmployee(employee) {
-		this.employees.push(employee);
-	}
-
-	toJson() {
-		return `{"name":"${this.name}","managerName":"${this.managerName}","employees":[${this.employees.map((e) => e.toJson()).join(", ")}]}`
-	}
-}
-
-
-class Organization {
-	constructor() {
-		this.departments = new Map();
-	}
-
-	addEmployee(employee) {
-		const department_name = employee.department;
-		if (!this.departments.has(department_name)) {
-			this.departments.set(department_name, new Department(department_name));
-		}
-		this.departments.get(department_name).addEmployee(employee);
-		if (employee.isManager) {
-			this.departments.get(department_name).setManager(employee.name)
-		}
-	}
-
-	toJson() {
-		return `{"organization":{"departments":[${Array.from(this.departments.values()).map((d) => d.toJson()).join(", ")}]}}`
-	}
-}
+import Employee from './org-classes/Employee.js';
+import Organization from './org-classes/Organization.js';
 
 
 export default {
@@ -97,11 +42,12 @@ export default {
 
 				// parse organization data from csv
 				const rows = orgData.split("\r\n");
-				for (let row_index = 1; row_index < rows.length - 1; row_index++) {
-					const row = rows[row_index].split(","); // split row into array of cells
+				for (let rowIndex = 1; rowIndex < rows.length - 1; rowIndex++) {
+					const row = rows[rowIndex].split(","); // split row into array of cells
 					if (row) {
 						const salary = Number(row[2]); // parse number from salary string
 						const isManager = row[4] === "TRUE"; // parse boolean from isManager string
+
 						//construct employee from row data
 						const employee = new Employee(row[0], row[1], salary, row[3], isManager, [row[5], row[6], row[7]]);
 						org.addEmployee(employee);
@@ -122,31 +68,31 @@ export default {
 				const query = JSON.parse(body);
 
 				const orgData = await env.KV_ORG_DB.get("org_json_default", { type: "json" });
-				let employee_matches = [];
+				let employeeMatches = [];
 
 				// find all employees matching the query - iterate through all employees in organization
 				const departments = orgData.organization.departments;
 				for (const department of departments) {
 					for (const employee of department.employees) {
-						employee_matches.push(employee); // add employee to matches by default, remove if not a match
+						employeeMatches.push(employee); // add employee to matches by default, remove if not a match
 
 						// check for mismatch attributes between query and employee
 						for (const attribute in query) {
 							// check skills separately since they are stored in an array
 							if (attribute === "skill") {
 								if (employee.skills.indexOf(query[attribute] === -1)) {
-									employee_matches.pop();
+									employeeMatches.pop();
 									break;
 								}
 							} else if (query[attribute] !== employee[attribute]) {
-								employee_matches.pop();
+								employeeMatches.pop();
 								break;
 							}
 						}
 					}
 				}
 
-				const jsonMatches = `{ "employees": ${JSON.stringify(employee_matches)}}`;
+				const jsonMatches = `{ "employees": ${JSON.stringify(employeeMatches)}}`;
 				return new Response(jsonMatches, {
 					headers: {
 						"content-type": "application/json;charset=UTF-8",
